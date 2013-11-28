@@ -14,10 +14,19 @@ postdata=""
 
 die() {
 	echo "$*"
-	rm -f $nowbin ${nowbin}.c
+	rm -f $nowbin ${nowbin}.c > /dev/null 2>&1
 	exit 1
 }
 
+timenow() {
+	if [[ -f $nowbin ]]
+	then
+		$nowbin
+	else
+		python -c "import time; print int(time.time() * 1000);"
+	fi
+}
+	
 # This is a C program because it executes an order of 
 # magnitude faster than a python 1 liner. 
 # linux 'date' does microseconds but it's not portable.
@@ -34,7 +43,7 @@ int main(void) {
 }
 _EOF_
 
-gcc -O2 -o $nowbin ${nowbin}.c || die "could not build 'now' executable"
+gcc -O2 -o $nowbin ${nowbin}.c > /dev/null 2>&1 || rm -f $nowbin
 rm -f ${nowbin}.c
 
 [[ $# -ge 1 && $# -le 2 ]] || die "usage: $0 <numparallelprocs> <duration>"
@@ -47,11 +56,11 @@ duration=0
 
 [[ $parallel -gt 0 && $parallel -lt 1000 ]] || parallel=1
 
-allstart=$($nowbin)
+allstart=$(timenow)
 
 function startproc() {
 	i=$1
-	begintime=$($nowbin)
+	begintime=$(timenow)
 	(${wget} ${wgetopts} --no-check-certificate -O${outfile} --post-data="$postdata" ${url}; echo $? > /tmp/retcode.$i) &
 	child[$i]=$!
 	starttime[$i]=$begintime
@@ -76,7 +85,7 @@ while [ $running -gt 0 ]
 do
 	for (( x = 1; x <= $totalrun; x++ ))
 	do
-		now=$($nowbin)
+		now=$(timenow)
 		[[ $duration -gt 0 && $(( $now - $allstart )) -gt $duration ]] && startmore=0
 		if [[ ${child[$x]} -ne 0 ]]
 		then
@@ -139,5 +148,5 @@ done
 	}'
 
 echo ""
-rm -f $nowbin
+rm -f $nowbin > /dev/null 2>&1
 exit 0
