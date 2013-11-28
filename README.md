@@ -6,11 +6,11 @@ Load test web sites with a simple bash script. You'll need gcc too. Includes a w
 There is a C source file embedded in the script that gets built, so ideally you need gcc. 
 If there is no gcc, you need python, but the accuracy is less because python takes longer to execute:
 
-# time python -c "import time; print int(time.time() * 1000);"
+$ time python -c "import time; print int(time.time() * 1000);"
 1385621597509
 real	0m0.035s
 
-# time ./now
+$ time ./now
 1385621600937
 real	0m0.004s
 
