@@ -1,0 +1,56 @@
+--- src/host.c.orig	2013-11-27 22:48:00.488216423 -0800
++++ src/host.c	2013-11-27 22:44:30.616228497 -0800
+@@ -668,6 +668,53 @@
+   bool use_cache;
+   bool numeric_address = false;
+   double timeout = opt.dns_timeout;
++  static char **overridehostlist = NULL;
++  static int didhostoverride = 0;
++  static char *override_env;
++
++/* 
++   Provide for overriding dns/host file entries for hostnames. 
++   HOSTOVERRIDE=go.myhost.com=1.2.3.4,www.myhost.com=::1 
++   comma delimiter is used because IPv6 addresses contain colons and because 
++   the utils.c function sepstring splits on commas, making life easier.
++   this only overrides a single address, not multiple addresses.
++   I am keeping both IPv4 and 6 addresses, and letting the ifdefs sort it out. 
++   P.S. I hate this brace style. 
++*/
++  if (didhostoverride == 0)
++    {
++      didhostoverride = 1;
++      char *tmp = getenv("HOSTOVERRIDE");
++      if (tmp != NULL)
++        {
++          override_env = xstrdup(tmp);
++          overridehostlist = sepstring(override_env);
++        }
++    }
++
++  char **override_hostip;
++  const char *overrideaddr = NULL;
++  for (override_hostip = overridehostlist; override_hostip && *override_hostip; override_hostip++)
++    {
++      char *ip = strchr(*override_hostip, '=');
++      if (ip != NULL)
++        {
++          *ip = '\0';
++          if (strcasecmp(*override_hostip, host) == 0)
++            {
++              *ip++ = '=';
++              overrideaddr = ip;
++              break;
++            }
++          else
++            *ip = '=';
++        }
++    }
++
++  /* after this point, everything works as normal 
++     (and numeric_address is true, so it's faster) */
++  if (overrideaddr != NULL)
++    host = overrideaddr;
+ 
+ #ifndef ENABLE_IPV6
+   /* If we're not using getaddrinfo, first check if HOST specifies a
